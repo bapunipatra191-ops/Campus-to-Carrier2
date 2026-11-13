@@ -10,7 +10,7 @@ from ai_engine.services import match_jobs
 
 @login_required
 def job_list(request):
-    jobs = Job.objects.select_related('company').prefetch_related('required_skills').order_by('-created_at')
+    jobs = Job.objects.select_related('company').prefetch_related('required_skills').order_by('-created_at').distinct()
     query = request.GET.get('q', '').strip()
     role = request.GET.get('role', '').strip()
     experience = request.GET.get('experience', '').strip()
@@ -33,8 +33,18 @@ def job_list(request):
     if hasattr(request.user, 'student_profile'):
         matches = match_jobs(request.user.student_profile, jobs)
     else:
-        matches = [{'job': job, 'score': 0, 'matched_skills': [], 'missing_skills': list(job.required_skills.values_list('name', flat=True)), 'eligible': True} for job in jobs]
+        matches = [{'job': job, 'score': 0, 'matched_skills': [], 'missing_skills': list(job.required_skills.values_list('name', flat=True)), 'eligible': True, 'salary_display': (job.salary if job.salary and ('LPA' in job.salary or 'Lakhs' in job.salary or 'K' in job.salary) else (job.salary + ' LPA' if job.salary else 'Package disclosed in details'))} for job in jobs]
     applied_ids = set()
+    # Add salary_display for uniform template usage
+    for m in matches:
+        salary = m['job'].salary
+        if salary:
+            if any(k in salary for k in ['LPA', 'Lakhs', 'K']):
+                m['salary_display'] = salary
+            else:
+                m['salary_display'] = f"{salary} LPA"
+        else:
+            m['salary_display'] = 'Package disclosed in details'
     if hasattr(request.user, 'student_profile'):
         applied_ids = set(Application.objects.filter(student=request.user.student_profile, job_id__in=[job.id for job in jobs]).values_list('job_id', flat=True))
     context = {

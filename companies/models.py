@@ -12,7 +12,7 @@ class Company(models.Model):
     name = models.CharField(max_length=255)
     industry = models.CharField(max_length=120, blank=True)
     description = models.TextField(blank=True)
-    website = models.URLField(blank=True)
+    website = models.URLField(blank=True, unique=True)
     logo = models.ImageField(upload_to='company_logos/', blank=True, null=True)
     locations = models.CharField(max_length=255, blank=True)
     hiring_process = models.TextField(blank=True)
